@@ -5,42 +5,37 @@
 
 using namespace std;
 
-const vector<pair<int, int>> Offset[2] 
+const vector<pair<int, int>> Offset
 {
-    {
-        {-1, -1},   // 0: NW
-        {0, -2},    // 1: W * 2
-        {1, -1},    // 2: SW
-        {2, 0},     // 3: S * 2
-        {1, 1},     // 4: SE
-        {0, 2},     // 5: E * 2
-        {-1, 1},    // 6: NE
-    },
-    {
-        {-1, 0},    // 0: N
-        {0, 1},     // 1: E
-        {1, 0},     // 2: S
-        {0, -1}     // 3: W
-    }
+    {-1, 0},    // 0: N
+    {0, 1},     // 1: E
+    {1, 0},     // 2: S
+    {0, -1}     // 3: W
 };
 
-enum ECheckDir : int
+const vector<pair<int, int>> CheckOffsetToDown
 {
-    NorthWest,
-    WestDouble,
-    SouthWest,
-    SouthDouble,
-    SouthEast,
-    EastDouble,
-    NorthEast,
+    {1, -1},    // 0: SW
+    {2, 0},     // 1: SS
+    {1, 1},     // 2: SE
 };
 
-enum EMoveDir : int
+const vector<pair<int, int>> CheckOffsetToLeftDown
 {
-    North,
-    East,
-    South,
-    West,
+    {-1, -1},   // 0: NW
+    {0, -2},    // 1: WW
+    {1, -1},    // 2: SW
+    {1, -2},    // 3: SWW
+    {2, -1},    // 4: SSW
+};
+
+const vector<pair<int, int>> CheckOffsetToRightDown
+{
+    {1, 1},     // 0: SE
+    {0, 2},     // 1: EE
+    {-1, 1},    // 2: NE
+    {2, 1},     // 3: SSE
+    {1, 2},     // 4: SEE
 };
 
 using Golem = tuple<int, int, int>; // r, c, d
@@ -56,7 +51,7 @@ inline bool OutOfBound(const int r, const int c)
 
 bool IsGolemOutOfBound(const int r, const int c)
 {
-    for(const auto& [dr, dc] : Offset[1])
+    for(const auto& [dr, dc] : Offset)
     {
         if(OutOfBound(r + dr, c + dc))
         {
@@ -67,11 +62,10 @@ bool IsGolemOutOfBound(const int r, const int c)
     return false;
 }
 
-bool CanMoveToDown(const int r, const int c, int& nr, int& nc)
+bool CanMoveToDown(int& r, int& c)
 {
-    for(int d : {ECheckDir::SouthWest, ECheckDir::SouthDouble, ECheckDir::SouthEast})
+    for(const auto& [dr, dc] : CheckOffsetToDown)
     {
-        const auto& [dr, dc] = Offset[0][d];
         int CheckR = r + dr, CheckC = c + dc;
         if(OutOfBound(CheckR, CheckC))
         {
@@ -86,16 +80,14 @@ bool CanMoveToDown(const int r, const int c, int& nr, int& nc)
         }
     }
 
-    const auto& [dr, dc] = Offset[1][EMoveDir::South];
-    nr = r + dr, nc = c + dc;
+    r++;
     return true;
 }
 
-bool CanMoveToLeftDown(const int r, const int c, int& nr, int& nc)
+bool CanMoveToLeftDown(int& r, int& c)
 {
-    for(int d : {ECheckDir::NorthWest, ECheckDir::WestDouble, ECheckDir::SouthWest})
+    for(const auto& [dr, dc] : CheckOffsetToLeftDown)
     {
-        const auto& [dr, dc] = Offset[0][d];
         int CheckR = r + dr, CheckC = c + dc;
         if(OutOfBound(CheckR, CheckC))
         {
@@ -110,20 +102,14 @@ bool CanMoveToLeftDown(const int r, const int c, int& nr, int& nc)
         }
     }
 
-    const auto& [dr, dc] = Offset[1][EMoveDir::West];
-    if(!CanMoveToDown(r + dr, c + dc, nr, nc))
-    {
-        return false;
-    }
-
+    r++; c--;
     return true;
 }
 
-bool CanMoveToRightDown(const int r, const int c, int& nr, int& nc)
+bool CanMoveToRightDown(int& r, int& c)
 {
-    for(int d : {ECheckDir::SouthEast, ECheckDir::EastDouble, ECheckDir::NorthEast})
+    for(const auto& [dr, dc] : CheckOffsetToRightDown)
     {
-        const auto& [dr, dc] = Offset[0][d];
         int CheckR = r + dr, CheckC = c + dc;
         if(OutOfBound(CheckR, CheckC))
         {
@@ -138,12 +124,7 @@ bool CanMoveToRightDown(const int r, const int c, int& nr, int& nc)
         }
     }
 
-    const auto& [dr, dc] = Offset[1][EMoveDir::East];
-    if(!CanMoveToDown(r + dr, c + dc, nr, nc))
-    {
-        return false;
-    }
-
+    r++; c++;
     return true;
 }
 
@@ -168,7 +149,7 @@ int GetLowestColFairyArrived(int Index)
             LowestCol = x;
         }
 
-        for(const auto& [dx, dy] : Offset[1])
+        for(const auto& [dx, dy] : Offset)
         {
             int nx = x + dx, ny = y + dy;
             if(OutOfBound(nx, ny) || Visited[nx][ny] || Forest[nx][ny] == 0) continue;
@@ -184,8 +165,8 @@ int GetLowestColFairyArrived(int Index)
 
             // 다른 골렘으로 옮겨갈 수 있는가?
             const auto& [SrcX, SrcY, ExitDir] = Golems[SrcIndex];
-            int ExitX = SrcX + Offset[1][ExitDir].first;
-            int ExitY = SrcY + Offset[1][ExitDir].second;
+            int ExitX = SrcX + Offset[ExitDir].first;
+            int ExitY = SrcY + Offset[ExitDir].second;
 
             // 현재 위치가 이 골렘의 탈출구 위치랑 동일한가?
             if(x == ExitX && y == ExitY)
@@ -203,52 +184,10 @@ int GetLowestColFairyArrived(int Index)
 void MarkGolemIndexAtForest(int r, int c, int Index)
 {
     Forest[r][c] = Index;
-    for(const auto& [dr, dc] : Offset[1])
+    for(const auto& [dr, dc] : Offset)
     {
         Forest[r + dr][c + dc] = Index;
     }
-}
-
-bool HandleStarting(int& r, int& c, int& d)
-{
-    {
-        const auto& [dr, dc] = Offset[0][ECheckDir::SouthDouble];
-        int nr = r + dr, nc = c + dc;
-
-        if(Forest[nr][nc] == 0)
-        {
-            r++;
-            return true;
-        }
-    }
-
-    if(c > 1)
-    {
-        c -= 1;
-        const auto& [dr, dc] = Offset[0][ECheckDir::SouthDouble];
-        int nr = r + dr, nc = c + dc;
-
-        if(Forest[nr][nc] == 0)
-        {
-            r++;
-            return true;
-        }
-    }
-
-    if(c < C - 2)
-    {
-        c += 1;
-        const auto& [dr, dc] = Offset[0][ECheckDir::SouthDouble];
-        int nr = r + dr, nc = c + dc;
-
-        if(Forest[nr][nc] == 0)
-        {
-            r++;
-            return true;
-        }
-    }
-
-    return false;
 }
 
 int MoveGolem(int Index)
@@ -256,37 +195,24 @@ int MoveGolem(int Index)
     auto& [r, c, d] = Golems[Index];
     int OriginR = r, OriginC = c, OriginDir = d;
 
-    if(!HandleStarting(r, c, d))
-    {
-        r = OriginR;
-        c = OriginC;
-        d = OriginDir;
-        return -1;
-    }
-
     while(true)
     {
         bool bMove = false;
-
-        int nr = r, nc = c;
-        if(CanMoveToDown(r, c, nr, nc))
+        if(CanMoveToDown(r, c))
         {
-            r = nr, c = nc;
             bMove = true;
             continue;
         }
 
-        if(CanMoveToLeftDown(r, c, nr, nc))
+        if(CanMoveToLeftDown(r, c))
         {
-            r = nr, c = nc;
             d = d == 0 ? 3 : d - 1;
             bMove = true;
             continue;
         }
 
-        if(CanMoveToRightDown(r, c, nr, nc))
+        if(CanMoveToRightDown(r, c))
         {
-            r = nr, c = nc;
             d = d == 3 ? 0 : d + 1;
             bMove = true;
             continue;
